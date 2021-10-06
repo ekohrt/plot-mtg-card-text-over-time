@@ -14,7 +14,6 @@ import json
 import re
 from datetime import datetime
 from matplotlib import pyplot as plt
-import matplotlib.ticker as ticker
 
 
 #get a dict of all card data
@@ -40,12 +39,33 @@ with open('mtg_sets_dates_deckstats.json', 'r', encoding='utf-8') as f3:
         sets_dict[code] = {"name": setSupplement_dict[code], "date": setSupplement_dict.get('releaseDate', None)}
     
     
-
+    
+    
+"""
+Searches all MtG cards for ones whose text matches a given regular expression.
+@param regexPattern is a compiled regex, like p = re.compile( r'(.*)[Ff]lying(.*)')
+@param specificType (string) is a way to filter for one specific type of card. Examples: "Creature", "Artifcat", "Goblin", "Land", etc.
+@return list of card names (strings)
+"""
+def searchCardsForMatches(regexPattern, specificType=""):
+    matching_cards = []
+    for name in cards_dict:
+        for face in cards_dict[name]: #some cards have multiple faces
+            #If types string doesn't contain your specific type, skip the card
+            if specificType in face['type']:
+                text = face.get('text', "").lower() #lowercase
+                if regexPattern.search(text) != None:
+                    matching_cards.append(name)
+    return matching_cards
+    
+    
+    
 """
 converts a date string like '1993-12-01' to a datetime object
 """
 def convertStringToDate(dateString):
     return datetime.strptime(dateString.replace("-"," "), '%Y %m %d')
+
 
 
 # make sure to exclude the set "Magic Online Promos (PRM)" since it causes inaccuracies.
@@ -64,6 +84,8 @@ def getAllDates(cardname):
     return printing_dates
 
 
+"""
+"""
 def getEarliestDate(cardname):
     #get all the printings of this card
     printing_dates = getAllDates(cardname)
@@ -74,22 +96,6 @@ def getEarliestDate(cardname):
         return None
     else: 
         return printing_dates[0]
-
-
-"""
-Searches all MtG cards for ones whose text matches a given regular expression.
-@param regexPattern is a compiled regex, like p = re.compile( r'(.*)[Ff]lying(.*)')
-@return list of card names (strings)
-"""
-def searchCardsForMatches(regexPattern):
-    matching_cards = []
-    for name in cards_dict:
-        for face in cards_dict[name]: #some cards have multiple faces
-            text = face.get('text', "").lower() #lowercase
-            if regexPattern.search(text) != None:
-                matching_cards.append(name)
-    return matching_cards
-
 
  
 """
@@ -124,12 +130,12 @@ def constructData(datetime_list):
 
 
 
-def plotDates(dates, regex_string):
+def plotDates(dates, regex_string, specificType=""):
     #For each year since 1993, count up the matching cards released that year
     x_data, y_data = constructData(dates)
 
     #plot the # of cards over time
-    plt.title('New MtG cards whose text contains the expression:\n {}'.format(regex_string))
+    plt.title('New MtG ' + specificType + ' cards whose text contains the expression:\n {}'.format(regex_string))
     plt.xlabel('year')
     plt.ylabel('# of cards')
     plt.locator_params(axis="both", integer=True)
@@ -139,17 +145,26 @@ def plotDates(dates, regex_string):
 
 def main():          
     #search for cards that contain this expression
-    regex = r'(.*)living weapon(.*)'
-    regex = r'(.*)face down(.*)'
+    # regex = r'(.*)living weapon(.*)'
+    # regex = r'(.*)face down(.*)'
+    # regex = r'(.*)prevent(.*)damage'
+    regex = r'(.*)phasing|phase out|phases out'
+    
     pattern = re.compile(regex)
-    matches = searchCardsForMatches(pattern)
+    matches = searchCardsForMatches(pattern, specificType="")
+    
+    # nameDateList = []
+    # for name in matches:
+    #     nameDateList.append( (name, getEarliestDate(name)) )
+    # nameDateList.sort( key=lambda item: item[1] )
+    # print( '\n'.join(map(str, nameDateList)) )
     
     # get all cards with text that matches this regex
     allDates = getAllEarliestDates(matches)
     
     #matplotlib tutorial: https://www.youtube.com/watch?v=UO98lJQ3QGI
     #plot the stuff 
-    plotDates(allDates, regex)
+    plotDates(allDates, regex, specificType="")
 
             
 if __name__ == "__main__":
